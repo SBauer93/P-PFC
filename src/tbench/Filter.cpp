@@ -24,7 +24,7 @@
 #include <iostream>
 #include <systemc.h>
 
-//@minimp3.c selfcoded - SBLIMIT
+// @minimp3.c selfcoded - SBLIMIT
 #define SBLIMIT 32
 
 // @minimp3.c Z.54 - FIXHR
@@ -247,8 +247,8 @@ static void imdct36(int *out, int *buf, int *in, int *win)
 }
 
 static void compute_imdct(
-	mp3_context_t *s, granule_t *g, int32_t *sb_samples, int32_t *mdct_buf
-) {
+	mp3_context_t *s, granule_t *g, int32_t *sb_samples, int32_t *mdct_buf)
+{
 	int32_t *ptr, *win, *win1, *buf, *out_ptr, *ptr1;
 	int32_t out2[12];
 	int i, j, mdct_long_end, v, sblimit;
