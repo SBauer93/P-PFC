@@ -26,6 +26,7 @@
 
 // @minimp3.c selfcoded - SBLIMIT
 #define SBLIMIT 32
+// Just a comment to check, whether the Git integration works on my computer
 
 // @minimp3.c Z.54 - FIXHR
 #define FIXHR(a) ((int)((a) * (1LL<<32) + 0.5))
