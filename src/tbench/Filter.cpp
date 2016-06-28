@@ -28,8 +28,14 @@
 #define SBLIMIT 32
 // Just a comment to check, whether the Git integration works on my computer
 
-// @minimp3.c Z.54 - FIXHR
+// @minimp3.c Z.59 - FIXHR
 #define FIXHR(a) ((int)((a) * (1LL<<32) + 0.5))
+// @minimp3.c Z.57 - FIXR
+//			  Z.55 - FRAC_ONE
+//			  Z.45 - FRAC_BITS 
+#define FRAC_BITS   15
+#define FRAC_ONE    (1 << FRAC_BITS)
+#define FIXR(a)   ((int)((a) * FRAC_ONE + 0.5))
 
 // @minimp3.c Z.777ff - Cx, icos36, icos36h
 #define C1 FIXHR(0.98480775301220805936/2)
@@ -64,6 +70,9 @@ static const int icos36h[9] = {
 	FIXHR(1.93185165257813657349 / 4), //2
  //    FIXHR(5.73685662283492756461),
 };
+
+// @libc.h Z.16 - INLINE
+#define INLINE __forceinline
 
 
  // @minimp3.c - MULH
@@ -262,7 +271,7 @@ static void compute_imdct(
 		v = ptr[0] | ptr[1] | ptr[2] | ptr[3] | ptr[4] | ptr[5];
 		if (v != 0)
 			break;
-	}
+						}
 	sblimit = ((ptr - g->sb_hybrid) / 18) + 1;
 
 	if (g->block_type == 2) {
