@@ -29,7 +29,7 @@ using std::ifstream;
 
 SC_MODULE(Producer){
 	// Output FIFO port
-	sc_fifo_out<char> outp;
+	sc_fifo_out<int32_t> outp;
 
 	// File stream for input data
 	ifstream inFile;

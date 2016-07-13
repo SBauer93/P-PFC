@@ -103,6 +103,59 @@ static INLINE int MULH(int a, int b) {
 }
 #endif
 
+// struct definitions for input buffer 
+typedef struct _granule {
+	uint8_t scfsi;
+	int part2_3_length;
+	int big_values;
+	int global_gain;
+	int scalefac_compress;
+	uint8_t block_type;
+	uint8_t switch_point;
+	int table_select[3];
+	int subblock_gain[3];
+	uint8_t scalefac_scale;
+	uint8_t count1table_select;
+	int region_size[3];
+	int preflag;
+	int short_start, long_end;
+	uint8_t scale_factors[40];
+	int32_t sb_hybrid[SBLIMIT * 18];
+} granule_t;
+
+typedef struct _bitstream {
+	const uint8_t *buffer, *buffer_end;
+	int index;
+	int size_in_bits;
+} bitstream_t;
+
+typedef struct _mp3_context {
+	uint8_t last_buf[2 * 512 + 24];
+	int last_buf_size;
+	int frame_size;
+	uint32_t free_format_next_header;
+	int error_protection;
+	int sample_rate;
+	int sample_rate_index;
+	int bit_rate;
+	bitstream_t gb;
+	bitstream_t in_gb;
+	int nb_channels;
+	int mode;
+	int mode_ext;
+	int lsf;
+	int16_t synth_buf[2][512 * 2];
+	int synth_buf_offset[2];
+	int32_t sb_samples[2][36][SBLIMIT];
+	int32_t mdct_buf[2][SBLIMIT * 18];
+	int dither_state;
+} mp3_context_t;
+
+typedef unsigned char  uint8_t;
+typedef   signed int   int32_t;
+typedef   signed short int16_t;
+
+
 using std::cout;
 using std::endl;
 
@@ -114,18 +167,30 @@ void Filter::filterTokens() {
 		 << ":\tfilterTokens():  Starting up!"
 	     << endl;
 	
-	// Token buffer and sample flag
-	char token  = '\0';
-	bool sample = true;
+	// input buffer
+	granule_t g;
+	int32_t sb_samples, mdct_buf;
+	int16_t mdct_win;
+	mp3_context_t bernd;
+
+	// pointer to the "granule_t" buffer
+	unsigned char *r_ptr = (unsigned char*)&g;
 
 	while (true) {
 
 		// Try to read token from input FIFO
-		while (!inp.nb_read(token))
+		while (!inp.nb_read(sb_samples))
 			wait(10, SC_NS);
+		while (!inp.nb_read(mdct_buf))
+			wait(10, SC_NS);
+		while (!inp.nb_read(mdct_win))
+			wait(10, SC_NS);
+		for (int i = 0; i < sizeof(g); ++i) {
+			r_ptr[i] = (unsigned char)inp.read();
+		}
 
-        // Sample every second token
-        if (!(sample = !sample)) continue;
+        // Call compute_imdct for actual decoding computation
+		compute_imdct(&bernd, &g, &sb_samples, &mdct_buf);
 
 		// Try to write token to output FIFO
 		while (!outp.nb_write(token))
@@ -262,6 +327,7 @@ static void compute_imdct(
 	int32_t *ptr, *win, *win1, *buf, *out_ptr, *ptr1;
 	int32_t out2[12];
 	int i, j, mdct_long_end, v, sblimit;
+
 
 	/* find last non zero block */
 	ptr = g->sb_hybrid + 576;
