@@ -70,36 +70,19 @@ void Producer::produceTokens() {
 
 
 	// Token buffer
-	granule_t g;
-	int32_t sb_samples, mdct_buf;
-	int16_t mdct_win;								
 
-	// Pointer to the "granule_t" struct
-	unsigned char *ptr = (unsigned char*) &g;
+	int32_t token;
 	
-	// Read the parameters from the FIFO
-	FILE *fifo_in = fopen(FIFO_IN, "r");
-	fread(&sb_samples, sizeof(int32_t), 1, fifo_in);
-	fread(&mdct_buf, sizeof(int32_t), 1, fifo_in);
-	fread(&mdct_win, sizeof(int16_t), 1, fifo_in);
-	for (int i = 0; i < sizeof(g); ++i) {
-		fread((unsigned char*)ptr[i], sizeof(int32_t), 1, fifo_in);
-	}
-	
+	while(true) {
+		// Read 4 byte (32 bit) from the FIFO
+		FILE *fifo_in = fopen(FIFO_IN, "r");
+		fread(&token, sizeof(int32_t), 1, fifo_in);
+		fclose(fifo_in);
 		
-		// Try to write onto FIFO. If FIFO is full,
+		// Try to write  4 byte onto FIFO. If FIFO is full,
 		// then wait for 10 ns
-	while (!outp.nb_write(sb_samples))
-		wait(10, SC_NS);
-	while (!outp.nb_write(mdct_buf))
-		wait(10, SC_NS);
-	while (!outp.nb_write(mdct_win))
-		wait(10, SC_NS);
-	for (int i = 0; i < sizeof(granule_t); ++i) {
-		while (!outp.nb_write((int32_t)ptr[i]))
+		while (!outp.nb_write(token))
 			wait(10, SC_NS);
-	}
-
 
 
 		// Say hello, if token is on FIFO

@@ -25,6 +25,8 @@
 #include <iostream>
 #include <systemc.h>
 
+#define FIFO_OUT "HW_DATA_OUT"
+
 using std::cout;
 using std::endl;
 
@@ -41,7 +43,7 @@ void Consumer::consumeTokens() {
 	     << endl;
 
 	// The token buffer
-	char token = '\0';
+	int32_t token;
 
 	while (true) {
 		// Try to read token from input FIFO
@@ -49,9 +51,10 @@ void Consumer::consumeTokens() {
 		while (!inp.nb_read(token))
 			wait(10, SC_NS);
 
-        // Write token to output file
-        outFile.put(token);
-        outFile.flush();
+		// Open the output FIFO and write datastream 
+		FILE *fifo_out = fopen(FIFO_OUT, "w");
+		fwrite(&token, sizeof(int32_t), 1, fifo_out);
+		fclose(fifo_out);
 
 		// Tell the world about the new token
 		//cout << sc_time_stamp()

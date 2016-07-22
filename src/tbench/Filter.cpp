@@ -169,32 +169,98 @@ void Filter::filterTokens() {
 	
 	// input buffer
 	granule_t g;
-	int32_t sb_samples, mdct_buf;
+	int32_t sb_samples[2][36][32];
+	int32_t mdct_buf[2][32][18];
 	int16_t mdct_win;
-	mp3_context_t bernd;
+	mp3_context_t bernd;		// just a dummy for calling compute_mdct
+	int ch, gr;					// indices for reference pointer
 
 	// pointer to the "granule_t" buffer
 	unsigned char *r_ptr = (unsigned char*)&g;
 
 	while (true) {
 
-		// Try to read token from input FIFO
-		while (!inp.nb_read(sb_samples))
-			wait(10, SC_NS);
-		while (!inp.nb_read(mdct_buf))
-			wait(10, SC_NS);
-		while (!inp.nb_read(mdct_win))
-			wait(10, SC_NS);
+		// Reconstruct sb_samples from port stream
+		for (int i = 0; i < 2; i++) {
+			for (int j = 0; j < 36; j++) {
+				for (int k = 0; k < 32; k++) {
+					while (!inp.nb_read(sb_samples[i][j][k]))
+						wait(10, SC_NS);
+				}
+			}
+		}
+
+		// Reconstruct mdct_buf from port stream
+		for (int i = 0; i < 2; i++) {
+			for (int j = 0; j < 32; j++) {
+				for (int k = 0; k < 18; k++) {
+					while (!inp.nb_read(mdct_buf[i][j][k]))
+						wait(10, SC_NS);
+				}
+			}
+		}
+		
+		// Reconstruct mdct_win from port stream
+		for (int j = 0; j < 8; j++) {
+			for (int k = 0; k < 36; k++) {
+				while (!inp.nb_read(mdct_win[j][k]))
+						wait(10, SC_NS);
+			}
+		}
+
+		// Reconstruct granule_t from port stream
 		for (int i = 0; i < sizeof(g); ++i) {
 			r_ptr[i] = (unsigned char)inp.read();
 		}
 
-        // Call compute_imdct for actual decoding computation
-		compute_imdct(&bernd, &g, &sb_samples, &mdct_buf);
-
-		// Try to write token to output FIFO
-		while (!outp.nb_write(token))
+		while (!inp.nb_read(ch))
 			wait(10, SC_NS);
+
+		while (!inp.nb_read(gr))
+			wait(10, SC_NS);
+
+        // Call compute_imdct for actual decoding computation
+		compute_imdct(&bernd, &g, &sb_samples[ch][18 * gr][0], &mdct_buf[ch][2][576]);
+
+		// Deconstruct sb_samples for port stream
+		for (int i = 0; i < 2; i++) {
+			for (int j = 0; j < 36; j++) {
+				for (int k = 0; k < 32; k++) {
+					while (!outp.nb_write(sb_samples[i][j][k]))
+						wait(10, SC_NS);
+				}
+			}
+		}
+
+		// Deconstruct mdct_buf for port stream
+		for (int i = 0; i < 2; i++) {
+			for (int j = 0; j < 32; j++) {
+				for (int k = 0; k < 18; k++) {
+					while (!outp.nb_write(mdct_buf[i][j][k]))
+						wait(10, SC_NS);
+				}
+			}
+		}
+
+		// Deconstruct mdct_win for port stream
+		for (int j = 0; j < 8; j++) {
+			for (int k = 0; k < 36; k++) {
+				while (!outp.nb_write(mdct_win[j][k]))
+					wait(10, SC_NS);
+			}
+		}
+
+		// Deconstruct granule_t for port stream
+		for (int i = 0; i < sizeof(g); ++i) {
+			outp.write((int32_t)r_ptr);
+		}
+
+/*		while (!outp.nb_write(ch))
+			wait(10, SC_NS);
+
+		while (!outp.nb_write(gr))
+			wait(10, SC_NS);
+*/
 	}
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
